@@ -14,6 +14,12 @@ dist-ssr
 .env
 .env.*
 !.env.example
+out.txt
+ts_errors.txt
+tsc_output.txt
+eslint_output.txt
+eslint_report.txt
+Untitled-1.md
 
 # Editor directories and files
 .vscode/*

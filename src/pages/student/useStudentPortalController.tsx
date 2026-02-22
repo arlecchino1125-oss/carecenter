@@ -84,9 +84,11 @@ export default function useStudentPortalController() {
         isPwd: false, pwdType: "",
         isIndigenous: false, indigenousGroup: "",
         witnessedConflict: "",
-        isSoloParent: false, isChildOfSoloParent: false
+        isSoloParent: false, isChildOfSoloParent: false,
+        profile_picture_url: ""
     });
     const [showMoreProfile, setShowMoreProfile] = useState(false);
+    const [isUploadingProfilePicture, setIsUploadingProfilePicture] = useState(false);
 
     // Onboarding Tour State
     const [showTour, setShowTour] = useState(false);
@@ -434,6 +436,7 @@ export default function useStudentPortalController() {
                     honorsAwards: studentData.honors_awards || '',
                     extracurricularActivities: studentData.extracurricular_activities || '',
                     scholarshipsAvailed: studentData.scholarships_availed || '',
+                    profile_picture_url: studentData.profile_picture_url || '',
                 }));
 
                 // Check if profile completion is needed
@@ -588,6 +591,56 @@ export default function useStudentPortalController() {
             showToast("Profile updated successfully!");
         } catch (err: any) {
             showToast("Error saving profile: " + err.message, 'error');
+        }
+    };
+
+    const handleProfilePictureUpload = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!personalInfo.studentId) {
+            showToast('Student ID not found. Please relogin.', 'error');
+            e.target.value = '';
+            return;
+        }
+        if (!file.type?.startsWith('image/')) {
+            showToast('Please select an image file.', 'error');
+            e.target.value = '';
+            return;
+        }
+
+        setIsUploadingProfilePicture(true);
+        try {
+            const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+            const safeExt = (ext || 'jpg').toLowerCase();
+            const fileName = `${personalInfo.studentId}/${Date.now()}-profile.${safeExt}`;
+
+            const { error: uploadError } = await supabaseClient.storage
+                .from('profile-pictures')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabaseClient.storage
+                .from('profile-pictures')
+                .getPublicUrl(fileName);
+
+            const publicUrl = publicUrlData?.publicUrl || '';
+            if (!publicUrl) throw new Error('Failed to resolve image URL');
+
+            const { error: updateError } = await supabaseClient
+                .from('students')
+                .update({ profile_picture_url: publicUrl })
+                .eq('student_id', personalInfo.studentId);
+
+            if (updateError) throw updateError;
+
+            setPersonalInfo((prev: any) => ({ ...prev, profile_picture_url: publicUrl }));
+            showToast('Profile picture updated!');
+        } catch (err: any) {
+            showToast(err.message || 'Error uploading profile picture', 'error');
+        } finally {
+            setIsUploadingProfilePicture(false);
+            e.target.value = '';
         }
     };
 
@@ -1298,6 +1351,8 @@ export default function useStudentPortalController() {
         setIsEditing,
         setPersonalInfo,
         saveProfileChanges,
+        handleProfilePictureUpload,
+        isUploadingProfilePicture,
         attendanceMap,
         showMoreProfile,
         setShowMoreProfile,

@@ -12,7 +12,8 @@ export default function StudentProfileModule({ p }: { p: any }) {
     );
 }
 function renderProfileView(p: any) {
-    const { profileTab, setProfileTab, personalInfo, isEditing, setIsEditing, setPersonalInfo, saveProfileChanges, Icons, attendanceMap, formatFullDate, showMoreProfile, setShowMoreProfile } = p;
+    const { profileTab, setProfileTab, personalInfo, isEditing, setIsEditing, setPersonalInfo, saveProfileChanges, handleProfilePictureUpload, isUploadingProfilePicture, Icons, attendanceMap, formatFullDate, showMoreProfile, setShowMoreProfile } = p;
+    const profilePictureInputRef = React.useRef<HTMLInputElement | null>(null);
     // Helper to render a field row
     const Field = ({ label, field, type, options, readOnly, colSpan }: any) => (
         <div className={colSpan ? `col-span-${colSpan}` : ''}>
@@ -63,7 +64,13 @@ function renderProfileView(p: any) {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-sky-400/20 rounded-full -mr-10 -mt-10 blur-2xl animate-float"></div>
                     <div className="h-24 bg-white/5 relative"></div>
                     <div className="px-8 pb-8 -mt-12 relative z-10">
-                        <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-sky-400 rounded-2xl mx-auto shadow-xl shadow-blue-500/30 flex items-center justify-center text-4xl font-black text-white border-4 border-white/20 mb-4">{personalInfo.firstName?.[0] || 'S'}</div>
+                        <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-sky-400 rounded-2xl mx-auto shadow-xl shadow-blue-500/30 flex items-center justify-center text-4xl font-black text-white border-4 border-white/20 mb-4 overflow-hidden">
+                            {personalInfo.profile_picture_url ? (
+                                <img src={personalInfo.profile_picture_url} alt="Student profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <>{personalInfo.firstName?.[0] || 'S'}</>
+                            )}
+                        </div>
                         <h3 className="text-xl font-extrabold">{personalInfo.firstName} {personalInfo.lastName} {personalInfo.suffix}</h3>
                         <p className="text-xs text-blue-200/50 font-medium">{personalInfo.studentId}</p>
                         <div className="flex justify-center gap-2 mt-4">
@@ -71,6 +78,8 @@ function renderProfileView(p: any) {
                             {personalInfo.section && <span className="bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold">Sec {personalInfo.section}</span>}
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-bold">{personalInfo.status}</span>
                         </div>
+                        <input ref={profilePictureInputRef} type="file" accept="image/*" className="hidden" onChange={handleProfilePictureUpload} />
+                        <button onClick={() => profilePictureInputRef.current?.click()} disabled={isUploadingProfilePicture} className="w-full mt-4 bg-white/15 backdrop-blur-sm text-white py-2.5 rounded-xl text-xs font-bold hover:bg-white/25 transition-all border border-white/20 btn-press disabled:opacity-60 disabled:cursor-not-allowed">{isUploadingProfilePicture ? 'Uploading Photo...' : 'Upload Profile Picture'}</button>
                         <button onClick={() => { setProfileTab('personal'); setIsEditing(true); }} className="w-full mt-8 bg-white/15 backdrop-blur-sm text-white py-2.5 rounded-xl text-xs font-bold hover:bg-white/25 transition-all border border-white/20 btn-press">Edit Profile</button>
                     </div>
                 </div>

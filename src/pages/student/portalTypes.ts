@@ -41,6 +41,7 @@
     witnessedConflict?: string;
     isSoloParent?: boolean;
     isChildOfSoloParent?: boolean;
+    profile_picture_url?: string;
     [key: string]: any; // Allow loose typing for now to prevent breakage
 }
 

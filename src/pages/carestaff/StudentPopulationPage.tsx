@@ -782,8 +782,12 @@ const StudentPopulationPage = ({ functions, sharedState }: any) => {
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-blue-200">
-                                    {profileViewStudent.first_name?.[0] || 'S'}
+                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-blue-200 overflow-hidden">
+                                    {profileViewStudent.profile_picture_url ? (
+                                        <img src={profileViewStudent.profile_picture_url} alt="Student profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>{profileViewStudent.first_name?.[0] || 'S'}</>
+                                    )}
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-bold text-slate-900">
@@ -833,6 +837,18 @@ const StudentPopulationPage = ({ functions, sharedState }: any) => {
                                             </span>
                                             <h3 className="text-lg font-bold text-slate-900">{PROFILE_CATEGORIES[profileCategoryIndex].label}</h3>
                                         </div>
+                                        {PROFILE_CATEGORIES[profileCategoryIndex].key === 'personal' && (
+                                            <div className="mb-6 p-4 rounded-xl border border-blue-100 bg-blue-50/40">
+                                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide mb-2">Profile Picture</p>
+                                                <div className="w-24 h-24 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center text-2xl font-black text-slate-600">
+                                                    {profileViewStudent.profile_picture_url ? (
+                                                        <img src={profileViewStudent.profile_picture_url} alt="Student profile" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <>{profileViewStudent.first_name?.[0] || 'S'}</>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                             {PROFILE_CATEGORIES[profileCategoryIndex].fields.map((field: any, idx: number) => {
                                                 let value = field.compute ? field.compute(profileViewStudent) : profileViewStudent[field.db];

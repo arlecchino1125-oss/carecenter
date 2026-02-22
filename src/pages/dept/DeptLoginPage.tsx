@@ -114,9 +114,9 @@ export default function DeptLogin() {
                                 </div>
 
                                 <form onSubmit={handleLogin} className="space-y-6">
-                                    {/* Username Input */}
+                                    {/* Email or Username Input */}
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Username</label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Email or Username</label>
                                         <div className="relative group">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
                                                 <User size={18} />
@@ -124,7 +124,7 @@ export default function DeptLogin() {
                                             <input
                                                 required
                                                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium placeholder-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
-                                                placeholder="e.g. dept_head_cs"
+                                                placeholder="depthead_cas or dept.head@school.edu"
                                                 value={username}
                                                 onChange={e => setUsername(e.target.value)}
                                             />
@@ -163,7 +163,7 @@ export default function DeptLogin() {
                                         <motion.button
                                             whileHover={{ y: -2 }}
                                             whileTap={{ scale: 0.98 }}
-                                            disabled={loading || authLoading}
+                                            disabled={loading}
                                             type="submit"
                                             className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-xl shadow-slate-900/20 hover:bg-slate-800 focus:ring-4 focus:ring-slate-900/10 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                                         >
@@ -205,5 +205,6 @@ export default function DeptLogin() {
         </div>
     );
 }
+
 
 

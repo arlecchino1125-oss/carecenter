@@ -228,14 +228,27 @@ export default function useStudentPortalController() {
 
     useEffect(() => {
         const checkSession = async () => {
-            if (!session?.user?.id) return;
+            if (!session) return;
+            const sessionStudentId = session.student_id || session?.user?.id || '';
+            const sessionEmail = String(session.email || session?.user?.email || '').trim().toLowerCase();
+            if (!sessionStudentId && !sessionEmail) return;
+
             try {
-                // Fetch student data
-                const { data: studentData, error: studentError } = await supabaseClient
+                // Fetch latest student data by student_id first, then email fallback.
+                let query = supabaseClient
                     .from('students')
-                    .select('*')
-                    .eq('student_id', session.user.id) // Assuming auth id maps to student_id or email
-                    .single();
+                    .select('*');
+
+                if (sessionStudentId) {
+                    query = query.eq('student_id', sessionStudentId);
+                } else {
+                    query = query
+                        .ilike('email', sessionEmail)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                }
+
+                const { data: studentData, error: studentError } = await query.maybeSingle();
 
                 if (studentError) {
                     console.error('Error fetching student data:', studentError);

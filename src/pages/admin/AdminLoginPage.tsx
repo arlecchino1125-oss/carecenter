@@ -1,11 +1,11 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { Shield, AlertCircle, CheckCircle, Terminal, EyeOff, Eye, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminLogin() {
-    const { login, loading: authLoading } = useAuth() as any;
+    const { login, logout, loading: authLoading, session, isAuthenticated } = useAuth() as any;
     const navigate = useNavigate();
     const [loading, setLoading] = useState<boolean>(false);
     const [username, setUsername] = useState<string>('');
@@ -18,19 +18,41 @@ export default function AdminLogin() {
         setTimeout(() => setToast(null), 4000);
     };
 
+    useEffect(() => {
+        if (!authLoading && isAuthenticated && session?.role === 'Admin') {
+            navigate('/admin/dashboard', { replace: true });
+        }
+    }, [authLoading, isAuthenticated, session, navigate]);
+
     const handleLogin = async (e: any) => {
         e.preventDefault();
+        if (loading) return;
         setLoading(true);
 
-        const result = await login(username, password, 'Admin');
+        try {
+            const result = await login(username, password, 'Admin');
 
-        if (result.success) {
-            showToast("System Access Granted. Initializing...", 'success');
-            setTimeout(() => navigate('/admin/dashboard'), 800);
-        } else {
-            showToast(result.error, 'error');
+            if (result.success) {
+                showToast("System Access Granted. Initializing...", 'success');
+                setTimeout(() => navigate('/admin/dashboard'), 800);
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (err: any) {
+            showToast(err?.message || 'Login failed. Please try again.', 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
+    };
+
+    const handleTerminateSession = async () => {
+        setLoading(true);
+        try {
+            await logout();
+            showToast('Session cleared. You can login again.', 'success');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const pageVariants = {
@@ -134,9 +156,9 @@ export default function AdminLogin() {
                                 </div>
 
                                 <form onSubmit={handleLogin} className="space-y-6">
-                                    {/* Username Input */}
+                                    {/* Email or Username Input */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-red-400 uppercase tracking-[0.2em] block">Admin_ID</label>
+                                        <label className="text-[10px] font-bold text-red-400 uppercase tracking-[0.2em] block">Email or Username</label>
                                         <div className="relative group">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-red-500 transition-colors">
                                                 {'>'}
@@ -144,7 +166,7 @@ export default function AdminLogin() {
                                             <input
                                                 required
                                                 className="w-full pl-10 pr-4 py-4 bg-[#030712] border border-slate-800 rounded-lg text-red-50 placeholder-slate-600 focus:bg-slate-900 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all outline-none"
-                                                placeholder="sysadmin"
+                                                placeholder="admin or admin@school.edu"
                                                 value={username}
                                                 onChange={e => setUsername(e.target.value)}
                                             />
@@ -183,7 +205,7 @@ export default function AdminLogin() {
                                         <motion.button
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
-                                            disabled={loading || authLoading}
+                                            disabled={loading}
                                             type="submit"
                                             className="w-full bg-red-600 text-white py-4 rounded-lg font-bold shadow-lg shadow-red-900/50 hover:bg-red-500 focus:ring-2 focus:ring-red-500/50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 uppercase tracking-widest text-sm"
                                         >
@@ -194,9 +216,13 @@ export default function AdminLogin() {
                                     </div>
 
                                     <div className="text-center pt-4">
-                                        <a href="/" className="text-xs font-bold text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest font-sans">
+                                        <button
+                                            type="button"
+                                            onClick={handleTerminateSession}
+                                            className="text-xs font-bold text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest font-sans"
+                                        >
                                             [ Terminate Session ]
-                                        </a>
+                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -227,5 +253,6 @@ export default function AdminLogin() {
         </div>
     );
 }
+
 
 

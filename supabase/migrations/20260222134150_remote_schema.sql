@@ -1,0 +1,3 @@
+-- Placeholder migration.
+-- Original remote pull diff was merged into later migration order so local `supabase db reset`
+-- can run from an empty database without failing on missing relations.

@@ -43,6 +43,8 @@ const TABLES_TO_CLEAR: string[] = [
     'departments'
 ];
 
+const normalizeEmail = (value: any) => String(value || '').trim().toLowerCase();
+
 export default function AdminDashboard() {
     const navigate = useNavigate();
     const { session, isAuthenticated, logout } = useAuth() as any;
@@ -135,15 +137,55 @@ export default function AdminDashboard() {
         e.preventDefault();
         const payload = { ...form };
         payload.username = payload.username.trim();
+        payload.email = normalizeEmail(payload.email);
+
+        if (!payload.email) {
+            showToast("Email is required for secure account login.", 'error');
+            return;
+        }
+
+        if (!payload.password || payload.password.length < 6) {
+            showToast("Password must be at least 6 characters.", 'error');
+            return;
+        }
+
         if (payload.role !== 'Department Head') delete payload.department;
 
         const { error } = await supabase.from('staff_accounts').insert([payload]);
-        if (error) showToast(error.message, 'error');
-        else {
-            showToast("Account created successfully!");
-            setForm({ username: '', password: '', full_name: '', role: 'Department Head', department: '', email: '' });
-            fetchAccounts();
+        if (error) {
+            showToast(error.message, 'error');
+            return;
         }
+
+        try {
+            const { data, error: provisionError } = await supabase.functions.invoke('provision-auth-user', {
+                body: {
+                    email: payload.email,
+                    password: payload.password,
+                    user_metadata: {
+                        source_table: 'staff_accounts',
+                        app_role: payload.role || 'Staff',
+                        username: payload.username || null,
+                        full_name: payload.full_name || null
+                    }
+                }
+            });
+
+            if (provisionError) {
+                showToast(`Account saved but auth setup failed: ${provisionError.message}`, 'error');
+            } else if (data?.status === 'created') {
+                showToast("Account and auth login created successfully.");
+            } else if (data?.status === 'updated') {
+                showToast("Account saved. Existing auth login was updated.");
+            } else {
+                showToast("Account saved. Auth login is ready.");
+            }
+        } catch (err: any) {
+            showToast(`Account saved but auth setup failed: ${err.message}`, 'error');
+        }
+
+        setForm({ username: '', password: '', full_name: '', role: 'Department Head', department: '', email: '' });
+        fetchAccounts();
     };
 
     const handleDelete = async (id: any) => {
@@ -273,7 +315,7 @@ export default function AdminDashboard() {
                             <div><label className="block text-xs font-bold text-gray-500 mb-1">Full Name</label><input required className="w-full border p-2 rounded" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
                             <div><label className="block text-xs font-bold text-gray-500 mb-1">Username</label><input required className="w-full border p-2 rounded" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></div>
                             <div><label className="block text-xs font-bold text-gray-500 mb-1">Password</label><input required className="w-full border p-2 rounded" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
-                            <div><label className="block text-xs font-bold text-gray-500 mb-1">Email (Optional)</label><input className="w-full border p-2 rounded" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+                            <div><label className="block text-xs font-bold text-gray-500 mb-1">Email</label><input required type="email" className="w-full border p-2 rounded" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
 
                             {form.role === 'Department Head' && (
                                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Department</label><select className="w-full border p-2 rounded" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })}><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>

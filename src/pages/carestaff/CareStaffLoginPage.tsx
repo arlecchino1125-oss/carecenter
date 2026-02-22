@@ -118,9 +118,9 @@ export default function CareStaffLogin() {
                             </div>
 
                             <form onSubmit={handleLogin} className="space-y-6">
-                                {/* Username Input */}
+                                {/* Email or Username Input */}
                                 <div className="space-y-2 text-left">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2">Username</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2">Email or Username</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-purple-500 transition-colors">
                                             <User size={18} />
@@ -128,7 +128,7 @@ export default function CareStaffLogin() {
                                         <input
                                             required
                                             className="w-full pl-12 pr-5 py-4 bg-slate-50/50 border border-slate-200 rounded-3xl text-slate-800 font-medium placeholder-slate-400 focus:bg-white focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10 transition-all outline-none"
-                                            placeholder="CARE Staff ID"
+                                            placeholder="carestaff or care.staff@school.edu"
                                             value={username}
                                             onChange={e => setUsername(e.target.value)}
                                         />
@@ -165,7 +165,7 @@ export default function CareStaffLogin() {
                                     <motion.button
                                         whileHover={{ y: -2 }}
                                         whileTap={{ scale: 0.98 }}
-                                        disabled={loading || authLoading}
+                                        disabled={loading}
                                         type="submit"
                                         className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-3xl font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 focus:ring-4 focus:ring-purple-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                                     >
@@ -206,5 +206,6 @@ export default function CareStaffLogin() {
         </div>
     );
 }
+
 
 

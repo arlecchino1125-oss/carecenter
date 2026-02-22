@@ -115,3 +115,50 @@ supabase stop
 supabase status
 supabase db reset
 ```
+
+## 10) Serve Edge Functions Locally
+
+Your app invokes edge functions (`send-email`, `provision-auth-user`) via `supabase.functions.invoke(...)`.
+Run this in a second terminal while developing:
+
+```powershell
+supabase functions serve --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+Set secrets used by current functions:
+
+```powershell
+supabase secrets set GMAIL_USER=<your_gmail_address>
+supabase secrets set GMAIL_APP_PASSWORD=<your_16_char_app_password>
+```
+
+## 11) Sync Existing Accounts to Supabase Auth (One-Time Backfill)
+
+Before enforcing strict RLS, sync existing `staff_accounts` and `students` into `auth.users`.
+This avoids getting locked out during policy hardening.
+
+After this one-time backfill, new staff accounts are auto-provisioned to `auth.users`
+via the `provision-auth-user` edge function during account creation.
+
+Local dev:
+
+```powershell
+$env:SUPABASE_URL="http://127.0.0.1:54321"
+$env:SUPABASE_SERVICE_ROLE_KEY="<SECRET_FROM_supabase_status>"
+npm run sync:auth-users
+```
+
+Cloud project:
+
+```powershell
+$env:SUPABASE_URL="https://<your-project-ref>.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="<service_role_key_from_project_settings>"
+npm run sync:auth-users
+```
+
+Optional dry run:
+
+```powershell
+$env:DRY_RUN="true"
+npm run sync:auth-users
+```

@@ -551,6 +551,35 @@ const NATPortal = () => {
                 alt_course_2: currentUser.alt_course_2
             };
 
+            const normalizedEmail = String(currentUser.email || '').trim().toLowerCase();
+            if (!normalizedEmail) {
+                throw new Error('Activation failed: applicant email is missing.');
+            }
+
+            const currentPassword = String(currentUser.password || '');
+            const authPassword = currentPassword.length >= 6
+                ? currentPassword
+                : Math.random().toString(36).slice(-8).toUpperCase();
+            profileData.email = normalizedEmail;
+            profileData.password = authPassword;
+
+            // Ensure NAT-activated students also get an auth.users account.
+            const { error: signUpError } = await supabase.auth.signUp({
+                email: normalizedEmail,
+                password: authPassword
+            });
+
+            if (signUpError) {
+                const signUpMsg = String(signUpError.message || '').toLowerCase();
+                const alreadyExists = signUpMsg.includes('already registered') || signUpMsg.includes('already exists');
+                if (!alreadyExists) {
+                    throw new Error(`Auth setup failed: ${signUpError.message}`);
+                }
+            }
+
+            // NAT login is not Supabase Auth-based; keep this flow signed out.
+            await supabase.auth.signOut();
+
             // 4. Upsert student
             const { data: existingStudent } = await supabase
                 .from('students')
@@ -574,10 +603,10 @@ const NATPortal = () => {
                 await supabase.functions.invoke('send-email', {
                     body: {
                         type: 'STUDENT_ACTIVATION',
-                        email: currentUser.email,
+                        email: normalizedEmail,
                         name: `${currentUser.first_name} ${currentUser.last_name}`,
                         studentId: studentId,
-                        password: currentUser.password
+                        password: authPassword
                     }
                 });
             } catch (emailErr: any) {

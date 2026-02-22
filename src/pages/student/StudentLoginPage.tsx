@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { GraduationCap, Lock, CheckCircle, AlertCircle, BookOpen, UserPlus, User, MapPin, Info, Loader2, X, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { GraduationCap, Lock, CheckCircle, AlertCircle, BookOpen, UserPlus, Mail, MapPin, Info, Loader2, X, Check, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function StudentLogin() {
@@ -13,7 +13,7 @@ export default function StudentLogin() {
     const [showActivateModal, setShowActivateModal] = useState<boolean>(false);
 
     // Login State
-    const [loginId, setLoginId] = useState<string>('');
+    const [loginEmail, setLoginEmail] = useState<string>('');
     const [loginPassword, setLoginPassword] = useState<string>('');
     const [showPassword, setShowPassword] = useState<boolean>(false);
 
@@ -129,7 +129,7 @@ export default function StudentLogin() {
     const handleLogin = async (e: any) => {
         e.preventDefault();
         setLoading(true);
-        const result = await loginStudent(loginId, loginPassword);
+        const result = await loginStudent(loginEmail, loginPassword);
 
         if (result.success) {
             showToast("Login Successful", 'success');
@@ -200,11 +200,36 @@ export default function StudentLogin() {
                 throw new Error("This Student ID has already been activated.");
             }
 
-            // 2. Generate Credentials
-            const username = formData.studentId;
+            // 2. Generate Credentials (email-based login)
+            const normalizedEmail = String(formData.email || '').trim().toLowerCase();
+            if (!normalizedEmail) {
+                throw new Error("Email is required.");
+            }
+
+            const { data: existingByEmail, error: existingByEmailError } = await supabase
+                .from('students')
+                .select('id')
+                .ilike('email', normalizedEmail)
+                .limit(1)
+                .maybeSingle();
+            if (existingByEmailError) throw new Error("Email validation failed.");
+            if (existingByEmail) throw new Error("Email is already used by another student account.");
+
             const password = Math.random().toString(36).slice(-8).toUpperCase();
 
-            // 3. Payload
+            // 3. Create auth account first (email + temporary password).
+            const { error: signUpError } = await supabase.auth.signUp({
+                email: normalizedEmail,
+                password
+            });
+            if (signUpError) {
+                throw new Error(`Auth setup failed: ${signUpError.message}`);
+            }
+
+            // Keep activation flow as unauthenticated after creating auth user.
+            await supabase.auth.signOut();
+
+            // 4. Payload
             // 2. Fetch Course & Department to set proper Department String
             let matchedDepartment = 'Unassigned';
             if (formData.course) {
@@ -238,7 +263,7 @@ export default function StudentLogin() {
                 civil_status: formData.civilStatus,
                 nationality: formData.nationality,
                 religion: formData.religion,
-                email: formData.email,
+                email: normalizedEmail,
                 mobile: formData.mobile,
                 facebook_url: formData.facebookUrl,
                 address: `${formData.street}, ${formData.city}, ${formData.province}`,
@@ -309,7 +334,7 @@ export default function StudentLogin() {
             }
 
             await supabase.from('enrolled_students')
-                .update({ is_used: true, assigned_to_email: formData.email })
+                .update({ is_used: true, assigned_to_email: normalizedEmail })
                 .eq('student_id', formData.studentId);
 
             // Mock Email
@@ -317,15 +342,15 @@ export default function StudentLogin() {
                 await supabase.functions.invoke('send-email', {
                     body: {
                         type: 'STUDENT_ACTIVATION',
-                        email: formData.email,
+                        email: normalizedEmail,
                         name: `${formData.firstName} ${formData.lastName}`,
-                        studentId: username,
+                        studentId: formData.studentId,
                         password: password
                     }
                 });
             } catch (err) { console.error("Email failed", err); }
 
-            setGeneratedCredentials({ username, password });
+            setGeneratedCredentials({ email: normalizedEmail, password, studentId: formData.studentId });
             showToast("Account Activated Successfully!", 'success');
 
         } catch (error: any) {
@@ -419,24 +444,25 @@ export default function StudentLogin() {
                                 </div>
 
                                 <form onSubmit={handleLogin} className="space-y-6">
-                                    {/* Student ID Input Group */}
+                                    {/* Email Input Group */}
                                     <div className="relative">
                                         <input
                                             required
-                                            id="studentId"
+                                            id="loginEmail"
+                                            type="email"
                                             className="peer w-full bg-indigo-950/30 border border-indigo-800/50 rounded-xl px-5 py-4 pt-6 text-white text-base outline-none transition-all placeholder-transparent focus:bg-indigo-900/40 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
-                                            placeholder="Student ID"
-                                            value={loginId}
-                                            onChange={e => setLoginId(e.target.value)}
+                                            placeholder="Email"
+                                            value={loginEmail}
+                                            onChange={e => setLoginEmail(e.target.value)}
                                         />
                                         <label
-                                            htmlFor="studentId"
+                                            htmlFor="loginEmail"
                                             className="absolute left-5 top-2 text-xs font-bold text-indigo-300/60 uppercase tracking-widest transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-4 peer-placeholder-shown:normal-case peer-placeholder-shown:font-normal peer-focus:top-2 peer-focus:text-xs peer-focus:font-bold peer-focus:uppercase peer-focus:text-sky-400 pointer-events-none"
                                         >
-                                            Student ID
+                                            Email Address
                                         </label>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-400/50 peer-focus:text-sky-400 transition-colors pointer-events-none">
-                                            <User size={20} />
+                                            <Mail size={20} />
                                         </div>
                                     </div>
 
@@ -471,7 +497,7 @@ export default function StudentLogin() {
                                         <motion.button
                                             whileHover={{ y: -2 }}
                                             whileTap={{ scale: 0.98 }}
-                                            disabled={loading || authLoading}
+                                            disabled={loading}
                                             type="submit"
                                             className="w-full bg-gradient-to-r from-indigo-500 to-sky-500 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 disabled:opacity-70 border border-t-white/20 border-b-black/20"
                                         >
@@ -563,18 +589,23 @@ export default function StudentLogin() {
                                             <div className="space-y-4">
                                                 <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm text-left relative overflow-hidden">
                                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
-                                                    <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">Student ID</p>
-                                                    <p className="font-mono font-bold text-xl text-slate-800 tracking-wider pl-1">{generatedCredentials.username}</p>
+                                                    <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">Login Email</p>
+                                                    <p className="font-mono font-bold text-xl text-slate-800 tracking-wider pl-1">{generatedCredentials.email}</p>
                                                 </div>
                                                 <div className="bg-white p-4 rounded-xl border border-sky-100 shadow-sm text-left relative overflow-hidden">
                                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-sky-500"></div>
                                                     <p className="text-xs text-sky-500 font-bold uppercase tracking-wider mb-1">Temporary Password</p>
                                                     <p className="font-mono font-bold text-xl text-slate-800 tracking-wider pl-1">{generatedCredentials.password}</p>
                                                 </div>
+                                                <div className="bg-white p-4 rounded-xl border border-violet-100 shadow-sm text-left relative overflow-hidden">
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500"></div>
+                                                    <p className="text-xs text-violet-500 font-bold uppercase tracking-wider mb-1">Student ID (Reference)</p>
+                                                    <p className="font-mono font-bold text-xl text-slate-800 tracking-wider pl-1">{generatedCredentials.studentId}</p>
+                                                </div>
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => { setShowActivateModal(false); setLoginId(generatedCredentials.username); }}
+                                            onClick={() => { setShowActivateModal(false); setLoginEmail(generatedCredentials.email); }}
                                             className="bg-slate-900 text-white px-10 py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl hover:-translate-y-1 w-full max-w-sm"
                                         >
                                             Return to Login
@@ -887,5 +918,6 @@ export default function StudentLogin() {
         </div>
     );
 }
+
 
 
